@@ -17,7 +17,7 @@ public class Main {
     {
         System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
         Server server = new Server(8181);
-        server.setHandler(new ProxyHandler("http://www.ti.bfh.ch/"));
+        server.setHandler(new ProxyHandler("http://localhost:8080/"));
         server.start();
         server.join();
     }
