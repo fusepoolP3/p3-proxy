@@ -101,17 +101,18 @@ public class ProxyHandler extends AbstractHandler {
                 }
             }
             final HttpEntity entity = inResponse.getEntity();
+            final ServletOutputStream os = outResponse.getOutputStream();
             if (entity != null) {
                 //outResponse.setContentType(target);
                 final InputStream instream = entity.getContent();
-                try {
-                    final ServletOutputStream os = outResponse.getOutputStream();
+                try {                    
                     IOUtils.copy(instream, os);
-                    os.flush();
                 } finally {
                     instream.close();
                 }
             }
+            //without flushing this and no or too little byte jetty return 404
+            os.flush();
         } finally {
             inResponse.close();
         }
