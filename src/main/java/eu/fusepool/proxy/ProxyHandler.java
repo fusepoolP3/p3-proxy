@@ -1,7 +1,17 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2014 Bern University of Applied Sciences.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package eu.fusepool.proxy;
 
@@ -25,13 +35,10 @@ import org.apache.http.ProtocolException;
 import org.apache.http.client.RedirectStrategy;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.protocol.HttpContext;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -39,7 +46,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 public class ProxyHandler extends AbstractHandler {
 
     private final String targetBaseUri;
-    //private final CloseableHttpClient httpclient;
+    private final CloseableHttpClient httpclient;
 
     ProxyHandler(String targetBaseUri) {
         if (targetBaseUri.endsWith("/")) {
@@ -47,18 +54,17 @@ public class ProxyHandler extends AbstractHandler {
         } else {
             this.targetBaseUri = targetBaseUri;
         }
-        
+        final HttpClientBuilder hcb = HttpClientBuilder.create();
+        hcb.setRedirectStrategy(new NeverRedirectStrategy());
+        httpclient = hcb.build();
     }
 
     @Override
     public void handle(String target, Request baseRequest,
             final HttpServletRequest inRequest, final HttpServletResponse outResponse)
             throws IOException, ServletException {
-        final HttpClientBuilder hcb = HttpClientBuilder.create();
-        hcb.setRedirectStrategy(new NeverRedirectStrategy());
-        CloseableHttpClient httpclient = hcb.build();
-        String targetUrlString = targetBaseUri + inRequest.getRequestURI();
-        System.out.println(targetUrlString);
+        final String targetUrlString = targetBaseUri + inRequest.getRequestURI();
+        //System.out.println(targetUrlString);
         final URL targetUrl = new URL(targetUrlString);
         final HttpEntityEnclosingRequestBase outRequest = new HttpEntityEnclosingRequestBase() {
 
@@ -116,8 +122,6 @@ public class ProxyHandler extends AbstractHandler {
         } finally {
             inResponse.close();
         }
-        httpclient.close();
-
     }
 
     private static class NeverRedirectStrategy implements RedirectStrategy {
