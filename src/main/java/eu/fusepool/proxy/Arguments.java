@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package eu.fusepool.proxy;
 
-import org.eclipse.jetty.server.Server;
-import org.wymiwyg.commons.util.arguments.ArgumentHandler;
+import org.wymiwyg.commons.util.arguments.ArgumentsWithHelp;
+import org.wymiwyg.commons.util.arguments.CommandLine;
 
 /**
  *
  * @author reto
  */
-public class Main {
-    public static void main(String[] args) throws Exception
-    {
-        Arguments arguments = ArgumentHandler.readArguments(Arguments.class, args);
-        if (arguments != null) {
-            start(arguments);
-        }
-    }
-
-    private static void start(Arguments arguments) throws Exception {
-        final Server server = new Server(arguments.getPort());//new Server(Integer.parseInt(arguments.getPort()));
-        server.setHandler(new ProxyHandler(arguments.getTarget()));
-        server.start();
-        server.join();
-    }
+public interface Arguments extends ArgumentsWithHelp {
     
+
+    @CommandLine(longName = "port", shortName = {"P"}, required = false,
+            defaultValue = "8181",
+            description = "The port on which the proxy shall listen")
+    public int getPort();
+    
+    @CommandLine(longName = "target", shortName = {"T"}, required = false,
+            defaultValue = "http://localhost:8080/",
+            description = "The base URI to which to redirect the requests (hostname is only used to locate target server)")
+    public String getTarget();
     
 }
