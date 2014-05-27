@@ -4,7 +4,7 @@ deploy:
   provider: releases
   api-key:
     - secure: VWL+B2S6Xixj+actXHzxMJCKeaLVKejyiK88FJEM1+deYJ8rcUGz1PUYMFN2yf5qQShIEuWr3qQrtLq6gxocvGh4peWdPqGMIkjIr+tXTozaGJ+2ogknXyOm0PoxSmHgwXL48H/bEuEjgzqYroBhc0EMjiskI47lJNrmeDq7mtM=
-  file: target/proxy-1.0-SNAPSHOT-jar-with-dependencies.jar
+  file: "target/proxy-1.0-SNAPSHOT-jar-with-dependencies.jar"
   on:
     tags: true
     all_branches: true
