@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>eu.fusepool.p3</groupId>
     <artifactId>proxy</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Fusepool P3 Platform: LDP Extraction Proxy</name>
     <licenses>
