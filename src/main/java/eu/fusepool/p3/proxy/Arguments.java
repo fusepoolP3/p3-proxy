@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.fusepool.proxy;
+package eu.fusepool.p3.proxy;
 
 import org.wymiwyg.commons.util.arguments.ArgumentsWithHelp;
 import org.wymiwyg.commons.util.arguments.CommandLine;

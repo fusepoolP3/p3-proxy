@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package eu.fusepool.proxy;
+package eu.fusepool.p3.proxy;
 
 import org.eclipse.jetty.server.Server;
 import org.wymiwyg.commons.util.arguments.ArgumentHandler;
