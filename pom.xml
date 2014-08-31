@@ -103,6 +103,12 @@
             <scope>runtime</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.clerezza</groupId>
+            <artifactId>rdf.jena.parser</artifactId>
+            <version>0.12</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.6.6</version>
@@ -117,6 +123,11 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>eu.fusepool.p3</groupId>
+            <artifactId>vocab</artifactId>
+            <version>0.2</version>
         </dependency>
         <dependency>
             <groupId>com.jayway.restassured</groupId>
