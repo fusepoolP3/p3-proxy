@@ -88,6 +88,7 @@ public class ProxyHandler extends AbstractHandler {
             final HttpServletRequest inRequest, final HttpServletResponse outResponse)
             throws IOException, ServletException {
         final String targetUriString = targetBaseUri + inRequest.getRequestURI();
+        final String requestUri = getFullRequestUrl(inRequest);
         //System.out.println(targetUriString);
         final URI targetUri;
         try {
@@ -107,7 +108,9 @@ public class ProxyHandler extends AbstractHandler {
         outRequest.setURI(targetUri);
         String transformerUri = null;
         if (method.equals("POST")) {
-            transformerUri = getTransformerUrl(getFullRequestUrl(inRequest), targetUri);
+            if (!"no-transform".equals(inRequest.getHeader("X-Fusepool-Proxy"))) {
+                transformerUri = getTransformerUrl(requestUri);
+            }
         }
         final Enumeration<String> headerNames = baseRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
@@ -115,7 +118,7 @@ public class ProxyHandler extends AbstractHandler {
             final Enumeration<String> headerValues = baseRequest.getHeaders(headerName);
             while (headerValues.hasMoreElements()) {
                 final String headerValue = headerValues.nextElement();
-                if (!headerName.equalsIgnoreCase("Content-Length")) {
+                if (!headerName.equalsIgnoreCase("Content-Length") && !headerName.equalsIgnoreCase("X-Fusepool-Proxy")) {
                     outRequest.setHeader(headerName, headerValue);
                 }
             }
@@ -157,7 +160,7 @@ public class ProxyHandler extends AbstractHandler {
             if (locationHeader == null) {
                 log.warn("Response to POST request to LDPC contains no Location header. URI: " + targetUriString);
             } else {
-                startTransformation(locationHeader.getValue(), targetUriString, transformerUri, inEntityBytes);
+                startTransformation(locationHeader.getValue(), requestUri, transformerUri, inEntityBytes);
             }
         }
     }
@@ -183,11 +186,12 @@ public class ProxyHandler extends AbstractHandler {
     }
 
     /**
-     * If targetUrl is a transforming container returns the URI of the
+     * If uri is a transforming container returns the URI of the
      * associated container, otherwise null
      */
-    private String getTransformerUrl(String requestedUri, URI targetUri) throws IOException {
-        HttpGet httpGet = new HttpGet(targetUri);
+    private String getTransformerUrl(String uri) throws IOException {
+        HttpGet httpGet = new HttpGet(uri);
+        httpGet.addHeader("Accept", "text/turtle");
         CloseableHttpResponse response = httpclient.execute(httpGet);
         try {
             final Header contentTypeHeader = response.getFirstHeader("Content-Type");
@@ -199,7 +203,7 @@ public class ProxyHandler extends AbstractHandler {
                 return null;
             }
             HttpEntity entity = response.getEntity();
-            final UriRef baseUri = new UriRef(requestedUri);
+            final UriRef baseUri = new UriRef(uri);
             final Graph graph = parser.parse(entity.getContent(), contentType, baseUri);
             EntityUtils.consume(entity);
             final Iterator<Triple> triples = graph.filter(baseUri, ELDP.transformer, null);
@@ -255,8 +259,12 @@ public class ProxyHandler extends AbstractHandler {
     private void post(String ldpcUri, HttpEntity entity, String mediaType,
             final String extractedFromUri) throws IOException {
         HttpPost httpPost = new HttpPost(ldpcUri);
-        httpPost.setHeader("Slug", extractedFromUri.substring(extractedFromUri.lastIndexOf('/'))+"-transformed");
+        httpPost.setHeader("Slug", extractedFromUri.substring(extractedFromUri.lastIndexOf('/')+1)+"-transformed");
         httpPost.setHeader("Content-type", mediaType);
+        //while we could also post directly to the proxied server, this would 
+        //require twaeking host header and possibly request path
+        //so we call back to the proxy and use this header to allow a transformation loop
+        httpPost.setHeader("X-Fusepool-Proxy","no-transform");
         httpPost.setEntity(entity);
         try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
             if (response.getStatusLine().getStatusCode() != 201) {
