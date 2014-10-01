@@ -19,7 +19,11 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+    <properties>
+        <finalName>${project.artifactId}-${project.version}</finalName>
+    </properties>
     <build>
+        <finalName>${finalName}</finalName>
         <pluginManagement>
             <plugins>
                 <plugin>
