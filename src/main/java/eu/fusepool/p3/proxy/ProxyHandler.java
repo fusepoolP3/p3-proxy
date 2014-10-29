@@ -115,24 +115,31 @@ public class ProxyHandler extends AbstractHandler {
         final Enumeration<String> headerNames = baseRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             final String headerName = headerNames.nextElement();
+            if (headerName.equalsIgnoreCase("Content-Length") || headerName.equalsIgnoreCase("X-Fusepool-Proxy")) {
+                continue;
+            }
             final Enumeration<String> headerValues = baseRequest.getHeaders(headerName);
+            if (headerValues.hasMoreElements()) {
+                final String headerValue = headerValues.nextElement();
+                outRequest.setHeader(headerName, headerValue);
+            }
             while (headerValues.hasMoreElements()) {
                 final String headerValue = headerValues.nextElement();
-                if (!headerName.equalsIgnoreCase("Content-Length") && !headerName.equalsIgnoreCase("X-Fusepool-Proxy")) {
-                    outRequest.setHeader(headerName, headerValue);
-                }
+                outRequest.addHeader(headerName, headerValue);
             }
         }
+        final Header[] outRequestHeaders = outRequest.getAllHeaders();
         //slow: outRequest.setEntity(new InputStreamEntity(inRequest.getInputStream()));
         final byte[] inEntityBytes = IOUtils.toByteArray(inRequest.getInputStream());
         if (inEntityBytes.length > 0) {
             outRequest.setEntity(new ByteArrayEntity(inEntityBytes));
         }
-        final CloseableHttpResponse inResponse = httpclient.execute(outRequest);
+        final CloseableHttpResponse inResponse = httpclient.execute(outRequest);      
         try {
             outResponse.setStatus(inResponse.getStatusLine().getStatusCode());
+            final Header[] inResponseHeaders = inResponse.getAllHeaders();
             final Set<String> setHeaderNames = new HashSet();
-            for (Header header : inResponse.getAllHeaders()) {
+            for (Header header : inResponseHeaders) {
                 if (setHeaderNames.add(header.getName())) {
                     outResponse.setHeader(header.getName(), header.getValue());
                 } else {
@@ -160,7 +167,7 @@ public class ProxyHandler extends AbstractHandler {
             if (locationHeader == null) {
                 log.warn("Response to POST request to LDPC contains no Location header. URI: " + targetUriString);
             } else {
-                startTransformation(locationHeader.getValue(), requestUri, transformerUri, inEntityBytes);
+                startTransformation(locationHeader.getValue(), requestUri, transformerUri, inEntityBytes, outRequestHeaders);
             }
         }
     }
@@ -186,8 +193,8 @@ public class ProxyHandler extends AbstractHandler {
     }
 
     /**
-     * If uri is a transforming container returns the URI of the
-     * associated container, otherwise null
+     * If uri is a transforming container returns the URI of the associated
+     * container, otherwise null
      */
     private String getTransformerUrl(String uri) throws IOException {
         HttpGet httpGet = new HttpGet(uri);
@@ -219,10 +226,11 @@ public class ProxyHandler extends AbstractHandler {
         return null;
     }
 
-    private void startTransformation(final String resourceUri, 
+    private void startTransformation(final String resourceUri,
             final String ldpcUri,
             final String transformerUri,
-            final byte[] bytes) {
+            final byte[] bytes,
+            final Header[] allHeaders) {
         (new Thread() {
 
             @Override
@@ -236,40 +244,51 @@ public class ProxyHandler extends AbstractHandler {
                     final String contentType = contentTypeHeader.getValue();
                     if (isRdf(contentType)) {
                         Graph transformationResult = parser.parse(entity.getContent(), contentType);
-                        final ByteArrayOutputStream baos = new ByteArrayOutputStream((int) (entity.getContentLength()+3000));
+                        final ByteArrayOutputStream baos = new ByteArrayOutputStream((int) (entity.getContentLength() + 3000));
                         serializer.serialize(baos, transformationResult, SupportedFormat.TURTLE);
                         final byte[] bytes = baos.toByteArray();
-                        final StringWriter turtleString = new StringWriter(baos.size()+2000);
+                        final StringWriter turtleString = new StringWriter(baos.size() + 2000);
                         turtleString.append(new String(bytes, "UTF-8"));
                         turtleString.append('\n');
-                        turtleString.append("<> "+ELDP.transformedFrom+" <"+resourceUri+ "> .");
-                        post(ldpcUri, new ByteArrayEntity(turtleString.toString().getBytes("UTF-8")), "text/turtle", resourceUri);
+                        turtleString.append("<> " + ELDP.transformedFrom + " <" + resourceUri + "> .");
+                        post(ldpcUri, new ByteArrayEntity(turtleString.toString().getBytes("UTF-8")), "text/turtle", resourceUri, allHeaders);
                     } else {
-                        post(ldpcUri, entity, contentType, resourceUri);
+                        post(ldpcUri, entity, contentType, resourceUri, allHeaders);
                     }
                     EntityUtils.consume(entity);
                 } catch (IOException ex) {
-                    log.error("Error executing transformer: "+transformerUri, ex);
+                    log.error("Error executing transformer: " + transformerUri, ex);
                 }
             }
 
         }).start();
     }
-    
+
     private void post(String ldpcUri, HttpEntity entity, String mediaType,
-            final String extractedFromUri) throws IOException {
+            final String extractedFromUri, Header[] allHeaders) throws IOException {
         HttpPost httpPost = new HttpPost(ldpcUri);
-        httpPost.setHeader("Slug", extractedFromUri.substring(extractedFromUri.lastIndexOf('/')+1)+"-transformed");
+        final Set<String> setHeaderNames = new HashSet();
+        for (Header header : allHeaders) {
+            if (header.getName().equalsIgnoreCase("Content-Length")) {
+                continue;
+            }
+            if (setHeaderNames.add(header.getName())) {
+                httpPost.setHeader(header.getName(), header.getValue());
+            } else {
+                httpPost.addHeader(header.getName(), header.getValue());
+            }
+        }
+        httpPost.setHeader("Slug", extractedFromUri.substring(extractedFromUri.lastIndexOf('/') + 1) + "-transformed");
         httpPost.setHeader("Content-type", mediaType);
         //while we could also post directly to the proxied server, this would 
         //require twaeking host header and possibly request path
         //so we call back to the proxy and use this header to allow a transformation loop
-        httpPost.setHeader("X-Fusepool-Proxy","no-transform");
+        httpPost.setHeader("X-Fusepool-Proxy", "no-transform");
         httpPost.setEntity(entity);
         try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
             if (response.getStatusLine().getStatusCode() != 201) {
                 log.warn("Response to POST request to LDPC resulted in: "
-                        +response.getStatusLine()+" rather than 201. URI: "+ldpcUri);
+                        + response.getStatusLine() + " rather than 201. URI: " + ldpcUri);
             }
         }
     }

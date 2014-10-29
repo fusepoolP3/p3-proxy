@@ -122,11 +122,12 @@ public class ProxyTest {
         //Let's post some content
         RestAssured.given()
                 .contentType("text/plain;charset=UTF-8")
+                .header("Authorization", "foobar")
                 .content("hello")
                 .expect().statusCode(HttpStatus.SC_CREATED).when()
                 .post("/container1/");
         //the backend got the post request aiaginst the LDPC
-        verify(postRequestedFor(urlMatching("/container1/")));
+        verify(postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
         //and after a while also against the Transformer
         //first the transformer whould be checcked if the format matches
         //wait and try: verify(getRequestedFor(urlMatching("/simple-transformer")));
@@ -145,6 +146,21 @@ public class ProxyTest {
                 verify(postRequestedFor(urlMatching("/simple-transformer")));
             }
         }
+        i = 0;
+        while (true) {            
+            try {
+                verify(2,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+                break;
+            } catch (Error e) {
+                
+            }
+            Thread.sleep(100);
+            if (i++ > 600) {
+                //after one minute for real:
+                verify(2,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+            }
+        }
+        
     }
 
     public static int findFreePort() {
