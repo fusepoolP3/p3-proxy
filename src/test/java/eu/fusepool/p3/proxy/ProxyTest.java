@@ -99,6 +99,16 @@ public class ProxyTest {
                 + "   ldp:hasMemberRelation ldp:member;\n"
                 + "   ldp:insertedContentRelation ldp:MemberSubject;\n"
                 + "   eldp:transformer <http://localhost:"+backendPort+"/simple-transformer>.";
+        
+        final String turtleTransformer = "@prefix dct: <http://purl.org/dc/terms/>.\n" +
+                "@prefix trans: <http://vocab.fusepool.info/transformer#>.\n" +
+                "<http://example.org/simple-transformer> a trans:Transformer;\n" +
+                "    dct:title \"A simple RDF Transformation\"@en;\n" +
+                "    dct:description \"transforms vcards to RDF\";\n" +
+                "    trans:supportedInputFormat \"text/vcard\";\n" +
+                "    trans:supportedOutputFormat \"text/turtle\";\n" +
+                "    trans:supportedOutputFormat \"text/ld+json\".";
+        
         stubFor(get(urlEqualTo("/container1/"))
                 //.withHeader("Accept", equalTo("text/turtle"))
                 .willReturn(aResponse()
@@ -111,6 +121,20 @@ public class ProxyTest {
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.SC_CREATED)
                         .withHeader("Location", "http://localhost:"+proxyPort+"/container1/new-resource")));
+        
+        stubFor(get(urlEqualTo("/simple-transformer"))
+                //.withHeader("Accept", equalTo("text/turtle"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_OK)
+                        .withHeader("Content-Type", "text/turtle")
+                        .withBody(turtleTransformer)));
+        
+        stubFor(post(urlEqualTo("/simple-transformer"))
+                //.withHeader("Accept", equalTo("text/turtle"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_OK)
+                        .withHeader("Content-Type", "text/plain")
+                        .withBody("I am transformed")));
         
         //A GET request returns the unmodified answer
         RestAssured.given().header("Accept", "text/turtle")

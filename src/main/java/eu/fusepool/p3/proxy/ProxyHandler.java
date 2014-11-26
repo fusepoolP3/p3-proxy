@@ -15,6 +15,10 @@
  */
 package eu.fusepool.p3.proxy;
 
+import eu.fusepool.p3.transformer.client.Transformer;
+import eu.fusepool.p3.transformer.client.TransformerClientImpl;
+import eu.fusepool.p3.transformer.commons.Entity;
+import eu.fusepool.p3.transformer.commons.util.InputStreamEntity;
 import eu.fusepool.p3.vocab.ELDP;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,6 +34,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.logging.Level;
+import javax.activation.MimeType;
+import javax.activation.MimeTypeParseException;
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -115,7 +121,9 @@ public class ProxyHandler extends AbstractHandler {
         final Enumeration<String> headerNames = baseRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             final String headerName = headerNames.nextElement();
-            if (headerName.equalsIgnoreCase("Content-Length") || headerName.equalsIgnoreCase("X-Fusepool-Proxy")) {
+            if (headerName.equalsIgnoreCase("Content-Length") 
+                    || headerName.equalsIgnoreCase("X-Fusepool-Proxy")
+                    || headerName.equalsIgnoreCase("Transfer-Encoding")) {
                 continue;
             }
             final Enumeration<String> headerValues = baseRequest.getHeaders(headerName);
@@ -230,35 +238,65 @@ public class ProxyHandler extends AbstractHandler {
             final String ldpcUri,
             final String transformerUri,
             final byte[] bytes,
-            final Header[] allHeaders) {
+            final Header[] requestHeaders) {
         (new Thread() {
 
             @Override
             public void run() {
-                HttpPost httpPost = new HttpPost(transformerUri);
-                httpPost.setHeader("Content-Location", resourceUri);
-                httpPost.setEntity(new ByteArrayEntity(bytes));
-                try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
-                    final HttpEntity entity = response.getEntity();
-                    final Header contentTypeHeader = entity.getContentType();
-                    final String contentType = contentTypeHeader.getValue();
+                Transformer transformer= new TransformerClientImpl(transformerUri);
+                Entity entity = new InputStreamEntity() {
+
+                    @Override
+                    public MimeType getType() {
+                        try {
+                            for(Header h : requestHeaders) {
+                                if (h.getName().equalsIgnoreCase("Content-Type")) {
+                                    return new MimeType(h.getValue());
+                                }
+                            }
+                            return new MimeType("application/octet-stream");
+                        } catch (MimeTypeParseException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+
+                    @Override
+                    public InputStream getData() throws IOException {
+                        return new ByteArrayInputStream(bytes);
+                    }
+
+                    @Override
+                    public URI getContentLocation() {
+                        try {
+                            return new URI(resourceUri);
+                        } catch (URISyntaxException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                };
+                Entity transformationResult = transformer.transform(entity);
+                
+                //final HttpEntity httpEntity = response.getEntity();
+                //final Header contentTypeHeader = httpEntity.getContentType();
+                final String contentType = transformationResult.getType().toString();
+                try {
                     if (isRdf(contentType)) {
-                        Graph transformationResult = parser.parse(entity.getContent(), contentType);
-                        final ByteArrayOutputStream baos = new ByteArrayOutputStream((int) (entity.getContentLength() + 3000));
-                        serializer.serialize(baos, transformationResult, SupportedFormat.TURTLE);
+                        Graph transformationResultGraph = parser.parse(transformationResult.getData(), contentType);
+                        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        serializer.serialize(baos, transformationResultGraph, SupportedFormat.TURTLE);
                         final byte[] bytes = baos.toByteArray();
                         final StringWriter turtleString = new StringWriter(baos.size() + 2000);
                         turtleString.append(new String(bytes, "UTF-8"));
                         turtleString.append('\n');
                         turtleString.append("<> " + ELDP.transformedFrom + " <" + resourceUri + "> .");
-                        post(ldpcUri, new ByteArrayEntity(turtleString.toString().getBytes("UTF-8")), "text/turtle", resourceUri, allHeaders);
+                        post(ldpcUri, new ByteArrayEntity(turtleString.toString().getBytes("UTF-8")), "text/turtle", resourceUri, requestHeaders);
                     } else {
-                        post(ldpcUri, entity, contentType, resourceUri, allHeaders);
+                        post(ldpcUri, new org.apache.http.entity.InputStreamEntity(transformationResult.getData()), contentType, resourceUri, requestHeaders);
                     }
-                    EntityUtils.consume(entity);
                 } catch (IOException ex) {
-                    log.error("Error executing transformer: " + transformerUri, ex);
+                    throw new RuntimeException(ex);
                 }
+                
             }
 
         }).start();
