@@ -274,8 +274,14 @@ public class ProxyHandler extends AbstractHandler {
                         }
                     }
                 };
-                Entity transformationResult = transformer.transform(entity);
-                
+
+                Entity transformationResult;
+                try {
+                    transformationResult = transformer.transform(entity, new MimeType("*/*"));
+                } catch (MimeTypeParseException ex) {
+                    throw new RuntimeException(ex);
+                }
+
                 //final HttpEntity httpEntity = response.getEntity();
                 //final Header contentTypeHeader = httpEntity.getContentType();
                 final String contentType = transformationResult.getType().toString();
