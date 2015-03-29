@@ -22,14 +22,11 @@ import eu.fusepool.p3.transformer.commons.util.InputStreamEntity;
 import eu.fusepool.p3.vocab.ELDP;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -58,11 +55,8 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.FileEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
@@ -79,10 +73,8 @@ public class ProxyHandler extends AbstractHandler {
     private final CloseableHttpClient httpclient;
     private final Parser parser = Parser.getInstance();
     private final Serializer serializer = Serializer.getInstance();
-    boolean firstRequest = true;
-    private final String backendAutoConfiguration;
 
-    ProxyHandler(String targetBaseUri, String backendAutoConfiguration) {
+    ProxyHandler(String targetBaseUri) {
         if (targetBaseUri.endsWith("/")) {
             this.targetBaseUri = targetBaseUri.substring(0, targetBaseUri.length() - 1);
         } else {
@@ -91,7 +83,6 @@ public class ProxyHandler extends AbstractHandler {
         final HttpClientBuilder hcb = HttpClientBuilder.create();
         hcb.setRedirectStrategy(new NeverRedirectStrategy());
         httpclient = hcb.build();
-        this.backendAutoConfiguration = backendAutoConfiguration;
     }
 
     @Override
@@ -100,18 +91,6 @@ public class ProxyHandler extends AbstractHandler {
             throws IOException, ServletException {
         final String targetUriString = targetBaseUri + inRequest.getRequestURI();
         final String requestUri = getFullRequestUrl(inRequest);
-        if (firstRequest) {
-            if (!"no-auto-config".equals(inRequest.getHeader("X-Fusepool-Proxy"))) {
-                synchronized (this) {
-                    if (firstRequest) {
-                        if (backendAutoConfiguration != null) {
-                            autoCofigureBackend(requestUri);
-                        }
-                        firstRequest = false;
-                    }
-                }
-            }
-        }
         //System.out.println(targetUriString);
         final URI targetUri;
         try {
@@ -138,7 +117,7 @@ public class ProxyHandler extends AbstractHandler {
         final Enumeration<String> headerNames = baseRequest.getHeaderNames();
         while (headerNames.hasMoreElements()) {
             final String headerName = headerNames.nextElement();
-            if (headerName.equalsIgnoreCase("Content-Length")
+            if (headerName.equalsIgnoreCase("Content-Length") 
                     || headerName.equalsIgnoreCase("X-Fusepool-Proxy")
                     || headerName.equalsIgnoreCase("Transfer-Encoding")) {
                 continue;
@@ -159,7 +138,7 @@ public class ProxyHandler extends AbstractHandler {
         if (inEntityBytes.length > 0) {
             outRequest.setEntity(new ByteArrayEntity(inEntityBytes));
         }
-        final CloseableHttpResponse inResponse = httpclient.execute(outRequest);
+        final CloseableHttpResponse inResponse = httpclient.execute(outRequest);      
         try {
             outResponse.setStatus(inResponse.getStatusLine().getStatusCode());
             final Header[] inResponseHeaders = inResponse.getAllHeaders();
@@ -260,13 +239,13 @@ public class ProxyHandler extends AbstractHandler {
 
             @Override
             public void run() {
-                Transformer transformer = new TransformerClientImpl(transformerUri);
+                Transformer transformer= new TransformerClientImpl(transformerUri);
                 Entity entity = new InputStreamEntity() {
 
                     @Override
                     public MimeType getType() {
                         try {
-                            for (Header h : requestHeaders) {
+                            for(Header h : requestHeaders) {
                                 if (h.getName().equalsIgnoreCase("Content-Type")) {
                                     return new MimeType(h.getValue());
                                 }
@@ -319,7 +298,7 @@ public class ProxyHandler extends AbstractHandler {
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
-
+                
             }
 
         }).start();
@@ -352,55 +331,6 @@ public class ProxyHandler extends AbstractHandler {
                         + response.getStatusLine() + " rather than 201. URI: " + ldpcUri);
             }
         }
-    }
-
-    private void autoCofigureBackend(String requestUri) throws MalformedURLException, IOException {
-        URL baseUrl = new URL(new URL(requestUri), "/");
-        File directory = new File(backendAutoConfiguration);
-        if (!directory.exists()) {
-            log.warn(directory.getAbsolutePath() + " does not exist, ignoring.");
-            return;
-        }
-        putFileOrDir(baseUrl, directory);
-    }
-
-    private void putFileOrDir(URL url, File file) throws MalformedURLException, IOException {
-        if (!file.isDirectory()) {
-            putFile(url, file);
-        } else {
-            final String urlString = url.toString();
-            final URL baseUrl = urlString.endsWith("/") ? url : new URL(urlString+"/");
-            for (File child : file.listFiles()) {
-                putFileOrDir(new URL(baseUrl, child.getName()), child);
-            }
-        }
-    }
-
-    private void putFile(URL url, File file) throws IOException {
-        try {
-            HttpPut httpPut = new HttpPut(url.toURI());
-            //again, while we could also post directly to the proxied server, this would 
-            //require twaeking host header and possibly request path
-            //so we call back to the proxy and use this header to allow a transformation loop
-            httpPut.setHeader("X-Fusepool-Proxy", "no-auto-config");
-            ContentType contentType = guessContentType(file);
-            HttpEntity entity = new FileEntity(file, contentType);
-            httpPut.setEntity(entity);
-            try (CloseableHttpResponse response = httpclient.execute(httpPut)) {
-                if (response.getStatusLine().getStatusCode() != 201) {
-                    log.warn("Response to PUT request to backend resulted in: "
-                            + response.getStatusLine() + " rather than 201. URI: " + url);
-                }
-            }
-
-        } catch (URISyntaxException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
-    private static ContentType guessContentType(File file) {
-        //TODO be a bit more sophisticated
-        return ContentType.create("text/turtle");
     }
 
     private static class NeverRedirectStrategy implements RedirectStrategy {

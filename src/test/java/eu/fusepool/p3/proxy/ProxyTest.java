@@ -65,7 +65,7 @@ public class ProxyTest {
         proxyPort = findFreePort();
         Assert.assertNotEquals("the assignment of different ports went wrong", backendPort, proxyPort);
         server = new Server(proxyPort);
-        server.setHandler(new ProxyHandler("http://localhost:" + backendPort, null));
+        server.setHandler(new ProxyHandler("http://localhost:" + backendPort));
         server.start();
         RestAssured.baseURI = "http://localhost:" + proxyPort + "/";
     }

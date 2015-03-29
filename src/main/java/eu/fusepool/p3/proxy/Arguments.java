@@ -36,8 +36,4 @@ public interface Arguments extends ArgumentsWithHelp {
             description = "The base URI to which to redirect the requests (hostname is only used to locate target server)")
     public String getTarget();
     
-    @CommandLine(longName = "backendAutoConfiguration", shortName = {"BAC"},  required = false,
-            description = "If set the proxy will attempt to put the files in the specified direcrory to the target on the firts request")
-    public String backendAutoConfiguration();
-    
 }

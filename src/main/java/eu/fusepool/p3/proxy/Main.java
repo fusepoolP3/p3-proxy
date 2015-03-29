@@ -33,7 +33,7 @@ public class Main {
 
     private static void start(Arguments arguments) throws Exception {
         final Server server = new Server(arguments.getPort());//new Server(Integer.parseInt(arguments.getPort()));
-        server.setHandler(new ProxyHandler(arguments.getTarget(), arguments.backendAutoConfiguration()));
+        server.setHandler(new ProxyHandler(arguments.getTarget()));
         server.start();
         server.join();
     }
