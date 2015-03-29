@@ -112,7 +112,7 @@ public class ProxyAutoConfigTest {
                 .body(new IsEqual(turtleLdpc)).when()
                 .get("/my/resource");
         
-        verify(putRequestedFor(urlMatching("/ldp/platform.nt")).withRequestBody(containing("sparqlEndoint")));
+        verify(putRequestedFor(urlMatching("/ldp/platform.nt")));
 
     }
 
