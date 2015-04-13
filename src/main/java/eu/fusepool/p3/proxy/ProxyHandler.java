@@ -89,7 +89,7 @@ public class ProxyHandler extends AbstractHandler {
     public void handle(String target, Request baseRequest,
             final HttpServletRequest inRequest, final HttpServletResponse outResponse)
             throws IOException, ServletException {
-        final String targetUriString = targetBaseUri + inRequest.getRequestURI();
+        final String targetUriString = targetBaseUri + getFullRequestUriPath(inRequest);
         final String requestUri = getFullRequestUrl(inRequest);
         //System.out.println(targetUriString);
         final URI targetUri;
@@ -190,6 +190,14 @@ public class ProxyHandler extends AbstractHandler {
 
     private static String getFullRequestUrl(HttpServletRequest request) {
         StringBuffer requestURL = request.getRequestURL();
+        if (request.getQueryString() != null) {
+            requestURL.append("?").append(request.getQueryString());
+        }
+        return requestURL.toString();
+    }
+    
+    private static String getFullRequestUriPath(HttpServletRequest request) {
+        final StringBuffer requestURL = new StringBuffer(request.getRequestURI());
         if (request.getQueryString() != null) {
             requestURL.append("?").append(request.getQueryString());
         }

@@ -106,6 +106,26 @@ public class ProxyTest {
     }
     
     @Test
+    public void queryParamsForwarded() throws Exception {
+
+        final String textResponse = "hello";
+        
+        stubFor(get(urlEqualTo("/my/test?a=1&b=2"))
+                .withHeader("Accept", equalTo("text/plain"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "text/plain")
+                        .withBody(textResponse)));
+
+        RestAssured.given().header("Accept", "text/plain")
+                .expect().statusCode(HttpStatus.SC_OK)
+                .header("Content-Type", "text/plain")
+                .body(new IsEqual(textResponse)).when()
+                .get("/my/test?a=1&b=2");
+
+    }
+    
+    @Test
     public void transformingContainer() throws Exception {
 
         final String turtleLdpc = "@prefix dcterms: <http://purl.org/dc/terms/>.\n"
