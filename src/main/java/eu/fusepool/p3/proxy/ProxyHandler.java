@@ -37,10 +37,10 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.clerezza.rdf.core.Graph;
-import org.apache.clerezza.rdf.core.Resource;
-import org.apache.clerezza.rdf.core.Triple;
-import org.apache.clerezza.rdf.core.UriRef;
+import org.apache.clerezza.commons.rdf.Graph;
+import org.apache.clerezza.commons.rdf.IRI;
+import org.apache.clerezza.commons.rdf.RDFTerm;
+import org.apache.clerezza.commons.rdf.Triple;
 import org.apache.clerezza.rdf.core.serializedform.Parser;
 import org.apache.clerezza.rdf.core.serializedform.Serializer;
 import org.apache.clerezza.rdf.core.serializedform.SupportedFormat;
@@ -222,14 +222,14 @@ public class ProxyHandler extends AbstractHandler {
                 return null;
             }
             HttpEntity entity = response.getEntity();
-            final UriRef baseUri = new UriRef(uri);
+            final IRI baseUri = new IRI(uri);
             final Graph graph = parser.parse(entity.getContent(), contentType, baseUri);
             EntityUtils.consume(entity);
             final Iterator<Triple> triples = graph.filter(baseUri, ELDP.transformer, null);
             while (triples.hasNext()) {
-                Resource object = triples.next().getObject();
-                if (object instanceof UriRef) {
-                    return ((UriRef) object).getUnicodeString();
+                RDFTerm object = triples.next().getObject();
+                if (object instanceof IRI) {
+                    return ((IRI) object).getUnicodeString();
                 }
             }
         } finally {

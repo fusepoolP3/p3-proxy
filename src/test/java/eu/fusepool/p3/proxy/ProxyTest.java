@@ -228,6 +228,114 @@ public class ProxyTest {
     }
     
     @Test
+    public void postingTurtleToTransformingContainer() throws Exception {
+
+        final String turtleLdpc = "@prefix dcterms: <http://purl.org/dc/terms/>.\n"
+                + "@prefix ldp: <http://www.w3.org/ns/ldp#>.\n"
+                + "@prefix eldp: <http://vocab.fusepool.info/eldp#>.\n"
+                + "\n"
+                + "<http://localhost:"+proxyPort+"/container1/>\n"
+                + "   a ldp:DirectContainer;\n"
+                + "   dcterms:title \"An extracting LDP Container using simple-transformer\";\n"
+                + "   ldp:membershipResource <http://localhost:"+proxyPort+"/container1/>;\n"
+                + "   ldp:hasMemberRelation ldp:member;\n"
+                + "   ldp:insertedContentRelation ldp:MemberSubject;\n"
+                + "   eldp:transformer <http://localhost:"+backendPort+"/rdf-transformer>.";
+        
+        final String turtleTransformer = "@prefix dct: <http://purl.org/dc/terms/>.\n" +
+                "@prefix trans: <http://vocab.fusepool.info/transformer#>.\n" +
+                "<http://example.org/simple-transformer> a trans:Transformer;\n" +
+                "    dct:title \"A simple RDF Transformation\"@en;\n" +
+                "    dct:description \"transforms vcards to RDF\";\n" +
+                "    trans:supportedInputFormat \"text/turtle\";\n" +
+                "    trans:supportedOutputFormat \"text/turtle\";\n" +
+                "    trans:supportedOutputFormat \"text/ld+json\".";
+        
+        final String turtleUnTransformed = "@prefix dct: <http://purl.org/dc/terms/>.\n" +
+                "[] dct:title \"Some thing\"@en;.";
+        
+        final String turtleTransformed = "@prefix dct: <http://purl.org/dc/terms/>.\n" +
+                "[] dct:title \"Some transformed thing\"@en;.";
+        
+        stubFor(get(urlEqualTo("/container1/"))
+                //.withHeader("Accept", equalTo("text/turtle"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_OK)
+                        .withHeader("Content-Type", "text/turtle")
+                        .withBody(turtleLdpc)));
+        
+        stubFor(post(urlEqualTo("/container1/"))
+                //.withHeader("Conetnt-Type", matching("text/plain*"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_CREATED)
+                        .withHeader("Location", "http://localhost:"+proxyPort+"/container1/new-resource")));
+        
+        stubFor(get(urlEqualTo("/rdf-transformer"))
+                //.withHeader("Accept", equalTo("text/turtle"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_OK)
+                        .withHeader("Content-Type", "text/turtle")
+                        .withBody(turtleTransformer)));
+        
+        stubFor(post(urlEqualTo("/rdf-transformer"))
+                //.withHeader("Accept", equalTo("text/turtle"))
+                .willReturn(aResponse()
+                        .withStatus(HttpStatus.SC_OK)
+                        .withHeader("Content-Type", "text/turtle")
+                        .withBody(turtleTransformed)));
+        
+        //A GET request returns the unmodified answer
+        RestAssured.given().header("Accept", "text/turtle")
+                .expect().statusCode(HttpStatus.SC_OK).header("Content-Type", "text/turtle").when()
+                .get("/container1/");
+        //Certainly the backend got the request
+        verify(getRequestedFor(urlMatching("/container1/")));
+        
+        //Let's post some content
+        RestAssured.given()
+                .contentType("text/plain;charset=UTF-8")
+                .header("Authorization", "foobar")
+                .content("hello")
+                .expect().statusCode(HttpStatus.SC_CREATED).when()
+                .post("/container1/");
+        //the backend got the post request against the LDPC
+        verify(postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+        //and after a while also against the Transformer
+        //first the transformer whould be checcked if the format matches
+        //wait and try: verify(getRequestedFor(urlMatching("/simple-transformer")));
+        //then we will get a POST (since media type is supported)
+        int i = 0;
+        while (true) {
+            Thread.sleep(100);
+            try {
+                verify(postRequestedFor(urlMatching("/rdf-transformer")));
+                break;
+            } catch (Error e) {
+                
+            }
+            if (i++ > 600) {
+                //after one minute for real:
+                verify(postRequestedFor(urlMatching("/rdf-transformer")));
+            }
+        }
+        i = 0;
+        while (true) {            
+            try {
+                verify(2,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+                break;
+            } catch (Error e) {
+                
+            }
+            Thread.sleep(100);
+            if (i++ > 600) {
+                //after one minute for real:
+                verify(2,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+            }
+        }
+        
+    }
+    
+    @Test
     public void longRunningTransformer() throws Exception {
         
         TransformerServer transformerServer = new TransformerServer(transformerPort, false);
