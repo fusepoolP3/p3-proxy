@@ -281,7 +281,7 @@ public class ProxyHandler extends AbstractHandler {
 
                 Entity transformationResult;
                 try {
-                    transformationResult = transformer.transform(entity, new MimeType("*/*"));
+                    transformationResult = transformer.transform(entity, new MimeType("application/n-triples"), new MimeType("text/turtle"), new MimeType("application/rdf+xml"), new MimeType("*/*"));
                 } catch (MimeTypeParseException ex) {
                     throw new RuntimeException(ex);
                 }
