@@ -1,4 +1,5 @@
 language: java
+sudo: false
 before_install: mvn install -DskipTests=true -DfinalName=proxy-$TRAVIS_TAG
 deploy:
   edge: true
