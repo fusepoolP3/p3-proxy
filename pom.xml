@@ -11,7 +11,7 @@
     <artifactId>proxy</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>Fusepool P3 Platform: LDP Extraction Proxy</name>
+    <name>Fusepool P3 Platform: LDP Transformation Proxy</name>
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
