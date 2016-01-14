@@ -335,7 +335,7 @@ public class ProxyHandler extends AbstractHandler {
         httpPost.setEntity(entity);
         try (CloseableHttpResponse response = httpclient.execute(httpPost)) {
             if (response.getStatusLine().getStatusCode() != 201) {
-                log.warn("Response to POST request to LDPC resulted in: "
+                log.warn("Posting tranformation result: Response to POST request to LDPC resulted in: "
                         + response.getStatusLine() + " rather than 201. URI: " + ldpcUri);
             }
         }
