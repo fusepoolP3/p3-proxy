@@ -226,10 +226,23 @@ public class ProxyHandler extends AbstractHandler {
             final Graph graph = parser.parse(entity.getContent(), contentType, baseUri);
             EntityUtils.consume(entity);
             final Iterator<Triple> triples = graph.filter(baseUri, ELDP.transformer, null);
-            while (triples.hasNext()) {
-                RDFTerm object = triples.next().getObject();
-                if (object instanceof IRI) {
-                    return ((IRI) object).getUnicodeString();
+            if (triples.hasNext()) {
+                while (triples.hasNext()) {
+                    final RDFTerm object = triples.next().getObject();
+                    if (object instanceof IRI) {
+                        return ((IRI) object).getUnicodeString();
+                    }
+                }
+            } else {
+                //as some LDP implementations seems to regard trailing slashes as
+                //meaningless decoration, we try with and without
+                final IRI altBaseUri = toggleSlash(baseUri);
+                final Iterator<Triple> altTriples = graph.filter(altBaseUri, ELDP.transformer, null);
+                while (altTriples.hasNext()) {
+                    final RDFTerm object = altTriples.next().getObject();
+                    if (object instanceof IRI) {
+                        return ((IRI) object).getUnicodeString();
+                    }
                 }
             }
         } finally {
@@ -338,6 +351,15 @@ public class ProxyHandler extends AbstractHandler {
                 log.warn("Posting tranformation result: Response to POST request to LDPC resulted in: "
                         + response.getStatusLine() + " rather than 201. URI: " + ldpcUri);
             }
+        }
+    }
+
+    private IRI toggleSlash(IRI baseUri) {
+        final String uriString = baseUri.getUnicodeString();
+        if (uriString.endsWith("/")) {
+            return new IRI(uriString.substring(0, uriString.length() - 1));
+        } else {
+            return new IRI(uriString + "/");
         }
     }
 
