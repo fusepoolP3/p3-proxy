@@ -281,7 +281,7 @@ public class ProxyTest {
                 //.withHeader("Accept", equalTo("text/turtle"))
                 .willReturn(aResponse()
                         .withStatus(HttpStatus.SC_OK)
-                        .withHeader("Content-Type", "text/turtle")
+                        .withHeader("Content-Type", "text/turtle;charset=UTF-8")
                         .withBody(turtleTransformed)));
         
         //A GET request returns the unmodified answer

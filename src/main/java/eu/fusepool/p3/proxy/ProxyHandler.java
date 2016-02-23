@@ -179,9 +179,12 @@ public class ProxyHandler extends AbstractHandler {
     /*
      * Rather than just checking if its RDF we should check the Liunke header following LDP Spec 5.2.1
      */
-    private boolean isRdf(String contentTypeHeader) {
+    private boolean isRdf(String mediaType) {
+        if (mediaType.contains(";")) {
+            mediaType = mediaType.split(";")[0];
+        }
         for (String supported : parser.getSupportedFormats()) {
-            if (supported.equalsIgnoreCase(contentTypeHeader)) {
+            if (supported.equalsIgnoreCase(mediaType)) {
                 return true;
             }
         }
@@ -206,7 +209,7 @@ public class ProxyHandler extends AbstractHandler {
 
     /**
      * If uri is a transforming container returns the URI of the associated
-     * container, otherwise null
+     * transformer, otherwise null
      */
     private String getTransformerUrl(String uri) throws IOException {
         HttpGet httpGet = new HttpGet(uri);
