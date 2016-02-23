@@ -322,7 +322,8 @@ public class ProxyTest {
         i = 0;
         while (true) {            
             try {
-                verify(2,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+                verify(1,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")).withRequestBody(containing("transformedFrom")));
+                verify(1,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")).withRequestBody(containing("label")));
                 break;
             } catch (Error e) {
                 
@@ -330,7 +331,8 @@ public class ProxyTest {
             Thread.sleep(100);
             if (i++ > 600) {
                 //after one minute for real:
-                verify(2,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")));
+                verify(1,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")).withRequestBody(containing("transformedFrom")));
+                verify(1,postRequestedFor(urlMatching("/container1/")).withHeader("Authorization", equalTo("foobar")).withRequestBody(containing("label")));
             }
         }
         
