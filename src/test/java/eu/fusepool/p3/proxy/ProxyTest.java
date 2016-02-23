@@ -293,9 +293,10 @@ public class ProxyTest {
         
         //Let's post some content
         RestAssured.given()
-                .contentType("text/plain;charset=UTF-8")
+                .contentType("text/turtle")
                 .header("Authorization", "foobar")
-                .content("hello")
+                .content("@prefix dct: <http://purl.org/dc/terms/>.\n"
+                        + "dct:label dct:label \"label\"")
                 .expect().statusCode(HttpStatus.SC_CREATED).when()
                 .post("/container1/");
         //the backend got the post request against the LDPC
