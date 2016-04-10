@@ -1,4 +1,4 @@
-# P3 Proxy
+# P3 Proxy [![Build Status](https://travis-ci.org/fusepoolP3/p3-proxy.svg?branch=master)](https://travis-ci.org/fusepoolP3/p3-proxy)
 
 An LDP proxy adding the extracting importer API.
 
