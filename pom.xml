@@ -91,7 +91,7 @@
             <dependency>
                 <groupId>org.apache.clerezza</groupId>
                 <artifactId>rdf.jena.commons</artifactId>
-                <version>1.1.1-SNAPSHOT</version>
+                <version>1.1.1</version>
                 <scope>runtime</scope>
             </dependency>
         </dependencies>
@@ -120,13 +120,13 @@
         <dependency>
             <groupId>org.apache.clerezza</groupId>
             <artifactId>rdf.jena.serializer</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.1</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.clerezza</groupId>
             <artifactId>rdf.jena.parser</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.1</version>
             <scope>runtime</scope>
             <exclusions>
                 <exclusion>
@@ -186,30 +186,5 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <repositories>
-        <!-- repos for SNAPSHOTS 8no idea why two, but its temporary anyway, till there's release fixing CLEREZZA-1009 -->
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <id>apache.snapshots2</id>
-            <name>Apache Snapshot Repository</name>
-            <url>https://repository.apache.org/content/groups/snapshots/</url>
-        </repository>
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <id>apache.snapshots</id>
-            <name>Apache Snapshots Repository</name>
-            <url>https://repository.apache.org/content/repositories/snapshots/</url>
-        </repository>
-    </repositories>
     
 </project>
